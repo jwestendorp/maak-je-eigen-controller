@@ -62,10 +62,13 @@ def svg(name, label, width, style, pill=False):
 
 SPACER = 'space'
 def spacer(width):
+    # Lege plek: zelfde opbouw als een blok (viewBox, rect, link), anders zet GitHub hem op een eigen regel
     name = f'space-{width}'
     open(f'{OUT}/{name}.svg', 'w').write(
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{H}"/>\n')
-    return f'<img src="./img/overzicht/{name}.svg" width="{width}" height="{H}" alt="">'
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{H}" viewBox="0 0 {width} {H}">'
+        f'<rect width="{width}" height="{H}" fill="#ffffff" fill-opacity="0"/></svg>\n')
+    return (f'<a href="#overzicht-per-niveau"><img src="./img/overzicht/{name}.svg" '
+            f'width="{width}" height="{H}" alt=""></a>')
 
 def b(name, label, step, anchor=None, style='normal', span=1.0):
     if anchor:
