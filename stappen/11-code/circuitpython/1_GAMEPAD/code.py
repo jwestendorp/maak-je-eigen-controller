@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: 2021 ladyada for Adafruit Industries
+# SPDX-License-Identifier: MIT
+
+import analogio
+import board
+import digitalio
+from digitalio import DigitalInOut
+import usb_hid
+from hid_gamepad import Gamepad
+
+print("Hello World!")
+
+gamepad = Gamepad(usb_hid.devices)
+
+# Pas de pinnen aan op basis van jouw bedrading.
+#
+#             GP0 GP1 GP2 GP3 etc.
+#              *   *   *   *
+#              0   1   2   3   4   5   6   7   8
+#             +--------------------------------+  8
+#             |                                |  9
+#          U--|                                | 10
+#          S--|          RP2040-Zero           | 11
+#          B--|                                | 12
+#             |                                | 13
+#             +--------------------------------+  14
+#              5V GND  3V3  29  28  27  26  15  14
+#
+buttons = [
+    # pin,                       button,    pressed?
+    [ DigitalInOut(board.GP15),     1,      False ],
+    [ DigitalInOut(board.GP6),      2,      False ],
+]
+
+for pin, button_number, pressed in buttons:
+    pin.direction = digitalio.Direction.INPUT
+    pin.pull = digitalio.Pull.UP
+
+# Analoge joystick. Alleen GP26 t/m GP29 zijn analoog: GP26 = A0, GP27 = A1, GP28 = A2, GP29 = A3
+joystick_x = analogio.AnalogIn(board.GP26)
+joystick_y = analogio.AnalogIn(board.GP27)
+
+
+def range_map(x, in_min, in_max, out_min, out_max):
+    """Werkt hetzelfde als de map()-functie van Arduino."""
+    return (x - in_min) * (out_max - out_min) // (in_max - in_min) + out_min
+
+
+print("Gamepad ready! Press buttons and move the joystick.")
+
+while True:
+    # Loop over elke knop
+    for i in range(len(buttons)):
+        pin, button_number, pressed = buttons[i]
+
+        if not pin.value:  # Knop ingedrukt (verbonden met GND)
+            if not pressed:
+                # De knop is net ingedrukt. pressed: False -> True
+                gamepad.press_buttons(button_number)
+                buttons[i][2] = True
+                print(" press. button:", i, "gamepad:", button_number, end="")
+        else:  # Knop losgelaten
+            if pressed:
+                # De knop is net losgelaten. pressed: True -> False
+                gamepad.release_buttons(button_number)
+                buttons[i][2] = False
+                print(" release. button:", i, "gamepad:", button_number, end="")
+
+    # Zet de analoge waarde van 0-65535 om naar een joystickwaarde van -127 tot 127.
+    gamepad.move_joysticks(
+        x=range_map(joystick_x.value, 0, 65535, -127, 127),
+        y=range_map(joystick_y.value, 0, 65535, -127, 127),
+    )
+    print(" x", joystick_x.value, "y", joystick_y.value, end="")
